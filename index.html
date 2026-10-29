@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jantar Mantar - Endless Runner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* --- GLOBAL & THEME STYLES --- */
+        :root {
+            --bg-dark: #0a0a0c;
+            --bg-card: #15151a;
+            --pink-neon: #ff007f;
+            --pink-glow: rgba(255, 0, 127, 0.4);
+            --white: #ffffff;
+            --gray: #888899;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--white);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1, h2, h3, .logo-text { font-family: 'Orbitron', sans-serif; }
+
+        /* --- SCREENS MANAGEMENT --- */
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            max-height: 900px;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+        .screen.active { display: flex; }
+
+        /* --- LOGO --- */
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-align: center;
+            color: var(--white);
+            text-shadow: 0 0 10px var(--pink-neon), 0 0 20px var(--pink-glow);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .logo-sub {
+            text-align: center;
+            color: var(--pink-neon);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+        }
+
+        /* --- BUTTONS & INPUTS --- */
+        .btn {
+            background: transparent;
+            border: 2px solid var(--pink-neon);
+            color: var(--white);
+            padding: 12px 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .btn:hover {
+            background: var(--pink-neon);
+            box-shadow: 0 0 15px var(--pink-glow);
+            color: var(--bg-dark);
+        }
+        .btn-primary {
+            background: var(--pink-neon);
+            color: var(--white);
+        }
+        .btn-primary:hover {
+            background: #ff3399;
+            box-shadow: 0 0 25px var(--pink-glow);
+        }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; color: var(--gray); font-size: 0.8rem; text-transform: uppercase;}
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-card);
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: var(--white);
+            font-size: 1rem;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--pink-neon);
+        }
+
+        /* --- AVATAR SELECTOR --- */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .avatar-item {
+            font-size: 2rem;
+            text-align: center;
+            padding: 10px;
+            background: var(--bg-card);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .avatar-item.selected {
+            border-color: var(--pink-neon);
+            box-shadow: 0 0 10px var(--pink-glow);
+        }
+
+        /* --- HOME & PROFILE CARDS --- */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: var(--gray); }
+        .stat-value { color: var(--pink-neon); font-weight: 600; }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #333;
+        }
+        .leaderboard-item:last-child { border-bottom: none; }
+        .rank { color: var(--pink-neon); font-weight: bold; width: 30px; }
+
+        /* --- GAME SCREEN --- */
+        #game-screen {
+            padding: 0;
+            max-width: 100%;
+            background: #050505;
+        }
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(to bottom, #1a0b12, #0a0a0c);
+        }
+        .game-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Orbitron', sans-serif;
+            pointer-events: none;
+        }
+        .hud-box {
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--pink-neon);
+        }
+        .hud-label { font-size: 0.7rem; color: var(--gray); }
+        .hud-value { font-size: 1.2rem; color: var(--white); }
+
+        /* --- GAME OVER --- */
+        #gameover-screen { justify-content: center; align-items: center; text-align: center; }
+        .final-score { font-size: 4rem; color: var(--pink-neon); margin: 20px 0; text-shadow: 0 0 20px var(--pink-glow);}
+
+        /* --- MOBILE CONTROLS --- */
+        .mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 40px;
+            pointer-events: none;
+        }
+        .ctrl-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 0, 127, 0.2);
+            border: 2px solid var(--pink-neon);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: var(--white);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Hide YouTube Player */
+        #youtube-player {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            visibility: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--pink-neon); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden YouTube Player for Phonk Music -->
+    <div id="youtube-player"></div>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <h1 class="logo-text">JANTAR MANTAR</h1>
+        <p class="logo-sub">ENDLESS RUNNER</p>
+
+        <div class="card">
+            <h3 style="margin-bottom:15px; color: var(--pink-neon);">Create Profile</h3>
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="inp-name" placeholder="Enter your name">
+            </div>
+            <div class="input-group">
+                <label>Age</label>
+                <input type="number" id="inp-age" placeholder="Your age">
+            </div>
+            <div class="input-group">
+                <label>Country</label>
+                <input type="text" id="inp-country" placeholder="e.g., India">
+            </div>
+            <div class="input-group">
+                <label>Language</label>
+                <select id="inp-lang">
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Telugu">Telugu</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="Marathi">Marathi</option>
+                </select>
+            </div>
+
+            <label style="color: var(--gray); font-size: 0.8rem; text-transform: uppercase; display:block; margin-bottom:10px;">Select Avatar</label>
+            <div class="avatar-grid" id="avatar-grid">
+                <div class="avatar-item selected" data-avatar="🏃">🏃</div>
+                <div class="avatar-item" data-avatar="🧕">🧕</div>
+                <div class="avatar-item" data-avatar="👳">👳</div>
+                <div class="avatar-item" data-avatar="🧔">🧔</div>
+                <div class="avatar-item" data-avatar="👩">👩</div>
+            </div>
+
+            <button class="btn btn-primary" onclick="completeLogin()">ENTER GAME</button>
+        </div>
+    </div>
+
+    <!-- 2. HOME SCREEN -->
+    <div id="home-screen" class="screen">
+        <h1 class="logo-text" style="font-size: 2rem;">JANTAR MANTAR</h1>
+        <p style="text-align:center; color:var(--gray); margin-bottom:20px;">Welcome, <span id="home-username" style="color:var(--pink-neon)"></span></p>
+
+        <button class="btn btn-primary" onclick="showScreen('settings-screen')">▶ PLAY GAME</button>
+        <button class="btn" onclick="showScreen('profile-screen')">👤 MY PROFILE</button>
+
+        <div class="card" style="margin-top:20px;">
+            <h3 style="margin-bottom:15px; color: var(--white);">🏆 TOP 5 LEADERBOARD</h3>
+            <div id="leaderboard-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom:10px; color: var(--white);">📜 HOW TO PLAY</h3>
+            <p style="color: var(--gray); font-size: 0.9rem; line-height: 1.6;">
+                • Use <b style="color:white;">LEFT / RIGHT</b> arrow keys to change lanes.<br>
+                • On mobile, use the <b style="color:white;">ON-SCREEN BUTTONS</b>.<br>
+                • Dodge the obstacles (Autos, Cows, Chai Stalls).<br>
+                • Collect coins to boost your score!<br>
+                • Speed increases infinitely. Survive as long as you can!
+            </p>
+        </div>
+    </div>
+
+    <!-- 3. PROFILE SCREEN -->
+    <div id="profile-screen" class="screen">
+        <h2 style="text-align:center; margin-bottom:20px; color: var(--pink-neon);">MY PROFILE</h2>
+        <div class="card" style="text-align:center;">
+            <div style="font-size: 4rem;" id="profile-avatar">🏃</div>
+            <h3 id="profile-name" style="margin: 10px 0;">Player</h3>
+        </div>
+        <div class="card">
+            <div class="stat-row"><span class="stat-label">Age</span><span class="stat-value" id="profile-age">-</span></div>
+            <div class="stat-row"><span class="stat-label">Country</span><span class="stat-value" id="profile-country">-</span></div>
+            <div class="stat-row"><span class="stat-label">Language</span><span class="stat-value" id="profile-lang">-</span></div>
+            <div class="stat-row"><span class="stat-label">Games Played</span><span class="stat-value" id="profile-games">0</span></div>
+            <div class="stat-row"><span class="stat-label">Highest Score</span><span class="stat-value" id="profile-highscore">0</span></div>
+        </div>
+        <button class="btn" onclick="showScreen('home-screen')">← BACK TO HOME</button>
+    </div>
+
+    <!-- 4. SETTINGS SCREEN (TIMER) -->
+    <div id="settings-screen" class="screen">
+        <h2 style="text-align:center; margin-bottom:20px; color: var(--pink-neon);">GAME SETTINGS</h2>
+        <div class="card">
+            <h3 style="margin-bottom:15px;">Timer Mode</h3>
+            <div class="input-group">
+                <label>Select Mode</label>
+                <select id="timer-mode" onchange="toggleTimerInput()">
+                    <option value="none">No Timer (Endless)</option>
+                    <option value="custom">Countdown Timer</option>
+                </select>
+            </div>
+            <div class="input-group" id="timer-input-group" style="display:none;">
+                <label>Time (Seconds)</label>
+                <input type="number" id="timer-seconds" value="60" min="10" max="300">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="startGame()">START RUN</button>
+        <button class="btn" onclick="showScreen('home-screen')">← BACK</button>
+    </div>
+
+    <!-- 5. GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <canvas id="game-canvas"></canvas>
+        <div class="game-hud">
+            <div class="hud-box">
+                <div class="hud-label">SCORE</div>
+                <div class="hud-value" id="hud-score">0</div>
+            </div>
+            <div class="hud-box" id="hud-timer-box" style="display:none;">
+                <div class="hud-label">TIME</div>
+                <div class="hud-value" id="hud-timer">60</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">LEVEL</div>
+                <div class="hud-value" id="hud-level">1</div>
+            </div>
+        </div>
+        <div class="mobile-controls">
+            <div class="ctrl-btn" id="btn-left">←</div>
+            <div class="ctrl-btn" id="btn-right">→</div>
+        </div>
+    </div>
+
+    <!-- 6. GAME OVER SCREEN -->
+    <div id="gameover-screen" class="screen">
+        <h1 class="logo-text" style="font-size: 2rem; color: var(--white);">RUN OVER!</h1>
+        <p style="color: var(--gray);">Your Journey Ends Here</p>
+        <div class="final-score" id="final-score">0</div>
+        <p style="color: var(--gray); margin-bottom: 30px;">Level Reached: <span id="final-level" style="color:var(--pink-neon)">1</span></p>
+
+        <button class="btn btn-primary" onclick="startGame()">🔄 PLAY AGAIN</button>
+        <button class="btn" onclick="shareScore()">📤 SHARE SCORE</button>
+        <button class="btn" onclick="showScreen('home-screen')">🏠 HOME</button>
+    </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        // ==========================================
+        // YOUTUBE PLAYER SETUP
+        // ==========================================
+        let ytPlayer;
+        function onYouTubeIframeAPIReady() {
+            ytPlayer = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                videoId: 'WEg2mU3_4zw', // Your Phonk Video ID
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'loop': 1,
+                    'playlist': 'WEg2mU3_4zw' // Required for looping
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            // Player is ready, volume set to 50%
+            event.target.setVolume(50);
+        }
+
+        // ==========================================
+        // APP STATE & LOCAL STORAGE
+        // ==========================================
+        let currentUser = JSON.parse(localStorage.getItem('jm_currentUser')) || null;
+        let allUsers = JSON.parse(localStorage.getItem('jm_allUsers')) || [];
+        let selectedAvatar = '🏃';
+
+        // Avatar Selection
+        document.querySelectorAll('.avatar-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.avatar-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                selectedAvatar = item.getAttribute('data-avatar');
+            });
+        });
+
+        // Screen Navigation
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'home-screen') updateHomeScreen();
+            if(id === 'profile-screen') updateProfileScreen();
+        }
+
+        // Login
+        function completeLogin() {
+            const name = document.getElementById('inp-name').value.trim();
+            const age = document.getElementById('inp-age').value;
+            const country = document.getElementById('inp-country').value.trim();
+            const lang = document.getElementById('inp-lang').value;
+
+            if(!name || !age || !country) {
+                alert('Please fill in all fields!');
+                return;
+            }
+
+            currentUser = { name, age, country, lang, avatar: selectedAvatar, highScore: 0, gamesPlayed: 0 };
+
+            let existingIdx = allUsers.findIndex(u => u.name === name && u.country === country);
+            if(existingIdx > -1) {
+                allUsers[existingIdx].avatar = selectedAvatar;
+                currentUser.highScore = allUsers[existingIdx].highScore;
+                currentUser.gamesPlayed = allUsers[existingIdx].gamesPlayed;
+            } else {
+                allUsers.push(currentUser);
+            }
+
+            localStorage.setItem('jm_currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('jm_allUsers', JSON.stringify(allUsers));
+
+            showScreen('home-screen');
+        }
+
+        // Auto login if user exists
+        if(currentUser) {
+            selectedAvatar = currentUser.avatar;
+            document.querySelectorAll('.avatar-item').forEach(i => {
+                i.classList.toggle('selected', i.getAttribute('data-avatar') === selectedAvatar);
+            });
+            showScreen('home-screen');
+        }
+
+        // Update Home
+        function updateHomeScreen() {
+            document.getElementById('home-username').innerText = currentUser.name;
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+
+            let topScores = [];
+            allUsers.forEach(u => {
+                if(u.highScore > 0) topScores.push({ name: u.name, score: u.highScore, avatar: u.avatar });
+            });
+            topScores.sort((a, b) => b.score - a.score);
+            topScores = topScores.slice(0, 5);
+
+            if(topScores.length === 0) {
+                list.innerHTML = '<p style="color:var(--gray); text-align:center;">No scores yet. Play a game!</p>';
+            } else {
+                topScores.forEach((u, i) => {
+                    list.innerHTML += `
+                        <div class="leaderboard-item">
+                            <span><span class="rank">#${i+1}</span> ${u.avatar} ${u.name}</span>
+                            <span style="color:var(--white); font-weight:bold;">${u.score}</span>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Update Profile
+        function updateProfileScreen() {
+            document.getElementById('profile-avatar').innerText = currentUser.avatar;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-age').innerText = currentUser.age;
+            document.getElementById('profile-country').innerText = currentUser.country;
+            document.getElementById('profile-lang').innerText = currentUser.lang;
+            document.getElementById('profile-games').innerText = currentUser.gamesPlayed;
+            document.getElementById('profile-highscore').innerText = currentUser.highScore;
+        }
+
+        // Timer Settings
+        function toggleTimerInput() {
+            const mode = document.getElementById('timer-mode').value;
+            document.getElementById('timer-input-group').style.display = mode === 'custom' ? 'block' : 'none';
+        }
+
+        // Share
+        function shareScore() {
+            const score = document.getElementById('final-score').innerText;
+            const text = `I scored ${score} in Jantar Mantar! Can you beat my score? 🏃💨 #JantarMantar`;
+            if(navigator.share) {
+                navigator.share({ title: 'Jantar Mantar Score', text: text });
+            } else {
+                navigator.clipboard.writeText(text);
+                alert('Score copied to clipboard!');
+            }
+        }
+
+        // ==========================================
+        // GAME ENGINE (CANVAS)
+        // ==========================================
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let animationId;
+        let gameRunning = false;
+
+        // Game Variables
+        let player, obstacles, coins, score, level, speed, spawnTimer, coinTimer;
+        let timeLeft, hasTimer, timerInterval;
+        const LANE_COUNT = 3;
+        let laneWidth, playerY;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            laneWidth = canvas.width / LANE_COUNT;
+            playerY = canvas.height - 150;
+        }
+
+        function startGame() {
+            showScreen('game-screen');
+            resizeCanvas();
+
+            const mode = document.getElementById('timer-mode').value;
+            hasTimer = mode === 'custom';
+            timeLeft = hasTimer ? parseInt(document.getElementById('timer-seconds').value) : 0;
+
+            document.getElementById('hud-timer-box').style.display = hasTimer ? 'block' : 'none';
+            document.getElementById('hud-timer').innerText = timeLeft;
+
+            player = { lane: 1, x: 0, y: playerY, width: 50, height: 50 };
+            updatePlayerX();
+            obstacles = [];
+            coins = [];
+            score = 0;
+            level = 1;
+            speed = 5;
+            spawnTimer = 0;
+            coinTimer = 0;
+            gameRunning = true;
+
+            // Play YouTube Music
+            if(ytPlayer && typeof ytPlayer.playVideo === 'function') {
+                ytPlayer.playVideo();
+            }
+
+            if(timerInterval) clearInterval(timerInterval);
+            if(hasTimer) {
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('hud-timer').innerText = timeLeft;
+                    if(timeLeft <= 0) endGame();
+                }, 1000);
+            }
+
+            if(animationId) cancelAnimationFrame(animationId);
+            gameLoop();
+        }
+
+        function updatePlayerX() {
+            player.x = (player.lane * laneWidth) + (laneWidth / 2) - (player.width / 2);
+        }
+
+        function gameLoop() {
+            if(!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Lanes (Road)
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#ff007f';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([20, 20]);
+            for(let i = 1; i < LANE_COUNT; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * laneWidth, 0);
+                ctx.lineTo(i * laneWidth, canvas.height);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // Update & Draw Obstacles
+            spawnTimer++;
+            if(spawnTimer > Math.max(30, 80 - (level * 2))) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+
+            for(let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.y += speed;
+
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.fillStyle = "#fff";
+                ctx.font = "20px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(obs.emoji, obs.x + obs.width/2, obs.y + obs.height/2 + 8);
+
+                if(checkCollision(player, obs)) {
+                    endGame();
+                    return;
+                }
+
+                if(obs.y > canvas.height) obstacles.splice(i, 1);
+            }
+
+            // Update & Draw Coins
+            coinTimer++;
+            if(coinTimer > 50) {
+                spawnCoin();
+                coinTimer = 0;
+            }
+
+            for(let i = coins.length - 1; i >= 0; i--) {
+                let coin = coins[i];
+                coin.y += speed;
+
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(coin.x + 15, coin.y + 15, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#000";
+                ctx.font = "bold 16px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("₹", coin.x + 15, coin.y + 20);
+
+                if(checkCollision(player, {x: coin.x, y: coin.y, width: 30, height: 30})) {
+                    score += 50;
+                    coins.splice(i, 1);
+                    continue;
+                }
+
+                if(coin.y > canvas.height) coins.splice(i, 1);
+            }
+
+            // Draw Player
+            ctx.fillStyle = '#ff007f';
+            ctx.shadowColor = '#ff007f';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0;
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(currentUser.avatar, player.x + player.width/2, player.y + 38);
+
+            score += 1;
+            level = Math.floor(score / 500) + 1;
+            speed = 5 + (level * 0.8);
+
+            document.getElementById('hud-score').innerText = score;
+            document.getElementById('hud-level').innerText = level;
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function spawnObstacle() {
+            let lane = Math.floor(Math.random() * LANE_COUNT);
+            let colors = ['#ff4444', '#44ff44', '#ffaa00', '#00aaff'];
+            let emojis = ['🛺', '🐄', '☕', '🚧'];
+            let idx = Math.floor(Math.random() * emojis.length);
+
+            obstacles.push({
+                lane: lane,
+                x: (lane * laneWidth) + (laneWidth / 2) - 25,
+                y: -60,
+                width: 50,
+                height: 50,
+                color: colors[idx],
+                emoji: emojis[idx]
+            });
+        }
+
+        function spawnCoin() {
+            let lane = Math.floor(Math.random() * LANE_COUNT);
+            coins.push({
+                lane: lane,
+                x: (lane * laneWidth) + (laneWidth / 2) - 15,
+                y: -30
+            });
+        }
+
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function endGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            if(timerInterval) clearInterval(timerInterval);
+
+            // Pause YouTube Music
+            if(ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+                ytPlayer.pauseVideo();
+            }
+
+            currentUser.gamesPlayed++;
+            if(score > currentUser.highScore) currentUser.highScore = score;
+
+            let idx = allUsers.findIndex(u => u.name === currentUser.name && u.country === currentUser.country);
+            if(idx > -1) {
+                allUsers[idx] = currentUser;
+            }
+            localStorage.setItem('jm_currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('jm_allUsers', JSON.stringify(allUsers));
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-level').innerText = level;
+            showScreen('gameover-screen');
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if(!gameRunning) return;
+            if(e.key === 'ArrowLeft' && player.lane > 0) {
+                player.lane--;
+                updatePlayerX();
+            }
+            if(e.key === 'ArrowRight' && player.lane < LANE_COUNT - 1) {
+                player.lane++;
+                updatePlayerX();
+            }
+        });
+
+        // Mobile Controls
+        document.getElementById('btn-left').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(gameRunning && player.lane > 0) { player.lane--; updatePlayerX(); }
+        });
+        document.getElementById('btn-right').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(gameRunning && player.lane < LANE_COUNT - 1) { player.lane++; updatePlayerX(); }
+        });
+
+        document.getElementById('btn-left').addEventListener('click', () => {
+            if(gameRunning && player.lane > 0) { player.lane--; updatePlayerX(); }
+        });
+        document.getElementById('btn-right').addEventListener('click', () => {
+            if(gameRunning && player.lane < LANE_COUNT - 1) { player.lane++; updatePlayerX(); }
+        });
+
+        window.addEventListener('resize', () => {
+            if(gameRunning) {
+                resizeCanvas();
+                updatePlayerX();
+                player.y = playerY;
+            }
+        });
+    </script>
+</body>
+</html>
